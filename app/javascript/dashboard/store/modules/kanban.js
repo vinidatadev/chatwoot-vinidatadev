@@ -209,6 +209,12 @@ const actions = {
     return data;
   },
 
+  async updateCard({ commit }, { pipelineId, cardId, ...cardData }) {
+    const { data } = await KanbanAPI.updateCard(pipelineId, cardId, cardData);
+    commit('UPDATE_CARD', data);
+    return data;
+  },
+
   async moveCard({ commit }, { pipelineId, cardId, fromColumnId, toColumnId, position }) {
     commit('MOVE_CARD', { cardId, fromColumnId, toColumnId, position });
     try {

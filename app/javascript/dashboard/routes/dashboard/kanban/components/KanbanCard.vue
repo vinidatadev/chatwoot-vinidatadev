@@ -18,13 +18,42 @@ const router = useRouter();
 const accountId = computed(() => store.getters['getCurrentAccountId']);
 const conversation = computed(() => props.card.conversation || {});
 
+// ── Edit modal ────────────────────────────────────────────────────────────────
+const showEditModal = ref(false);
+const editingNotes = ref('');
+const isSavingNotes = ref(false);
+
+const openEditModal = () => {
+  editingNotes.value = props.card.notes || '';
+  showEditModal.value = true;
+};
+
+const closeEditModal = () => {
+  showEditModal.value = false;
+};
+
+const saveNotes = async () => {
+  isSavingNotes.value = true;
+  try {
+    await store.dispatch('kanban/updateCard', {
+      pipelineId: props.pipelineId,
+      cardId: props.card.id,
+      notes: editingNotes.value,
+    });
+    props.card.notes = editingNotes.value;
+    closeEditModal();
+  } finally {
+    isSavingNotes.value = false;
+  }
+};
+
 // ── Priority ──────────────────────────────────────────────────────────────────
 const PRIORITIES = [
-  { value: null,     label: 'Sem prioridade', icon: 'i-lucide-minus',          color: 'text-n-slate-9' },
-  { value: 'low',    label: 'Baixa',          icon: 'i-lucide-arrow-down',      color: 'text-n-teal-11' },
-  { value: 'medium', label: 'Média',          icon: 'i-lucide-arrow-right',     color: 'text-n-amber-11' },
-  { value: 'high',   label: 'Alta',           icon: 'i-lucide-arrow-up',        color: 'text-n-ruby-11' },
-  { value: 'urgent', label: 'Urgente',        icon: 'i-lucide-alert-triangle',  color: 'text-n-ruby-11 animate-pulse' },
+  { value: null,     label: 'Sem prioridade', icon: 'i-lucide-minus',         color: 'text-n-slate-9' },
+  { value: 'low',    label: 'Baixa',          icon: 'i-lucide-arrow-down',     color: 'text-n-teal-11' },
+  { value: 'medium', label: 'Média',          icon: 'i-lucide-arrow-right',    color: 'text-n-amber-11' },
+  { value: 'high',   label: 'Alta',           icon: 'i-lucide-arrow-up',       color: 'text-n-ruby-11' },
+  { value: 'urgent', label: 'Urgente',        icon: 'i-lucide-alert-triangle', color: 'text-n-ruby-11' },
 ];
 
 const currentPriority = computed(() =>
@@ -36,15 +65,18 @@ const showPriorityMenu = ref(false);
 const setPriority = async priority => {
   showPriorityMenu.value = false;
   try {
+    const user = store.getters['auth/getCurrentUser'];
     await fetch(
       `/api/v1/accounts/${accountId.value}/conversations/${conversation.value.id}/toggle_priority`,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'api_access_token': store.getters['auth/getCurrentUser']?.access_token },
+        headers: {
+          'Content-Type': 'application/json',
+          'api_access_token': user?.access_token,
+        },
         body: JSON.stringify({ priority }),
       }
     );
-    // Update local state optimistically
     if (props.card.conversation) props.card.conversation.priority = priority;
   } catch (e) { /* silent */ }
 };
@@ -63,7 +95,6 @@ const statusClass = computed(() => {
 // ── Timer ─────────────────────────────────────────────────────────────────────
 const now = ref(Date.now());
 let timerInterval = null;
-
 onMounted(() => { timerInterval = setInterval(() => { now.value = Date.now(); }, 30_000); });
 onUnmounted(() => clearInterval(timerInterval));
 
@@ -82,7 +113,6 @@ const elapsedLabel = computed(() => {
   return `${Math.floor(hrs / 24)}d`;
 });
 
-// green → yellow (>50% SLA) → red (>100% SLA)
 const timerClass = computed(() => {
   if (!props.slaMinutes) return 'text-n-slate-10';
   const pct = elapsedMs.value / (props.slaMinutes * 60_000);
@@ -116,10 +146,12 @@ const onDelete = () => {
 </script>
 
 <template>
+  <!-- Card -->
   <div
-    class="relative bg-n-background rounded-lg border border-n-weak shadow-sm cursor-grab active:cursor-grabbing group transition-shadow hover:shadow-md"
+    class="relative bg-n-background rounded-lg border border-n-weak shadow-sm cursor-pointer group transition-shadow hover:shadow-md select-none"
     draggable="true"
     @dragstart="emit('dragstart', $event)"
+    @click="openEditModal"
   >
     <!-- Priority color bar -->
     <div
@@ -153,12 +185,12 @@ const onDelete = () => {
         </button>
       </div>
 
-      <!-- Row 2: Contact name -->
+      <!-- Contact name -->
       <p v-if="conversation.contact?.name" class="text-sm font-semibold text-n-slate-12 m-0 mb-1 truncate leading-tight">
         {{ conversation.contact.name }}
       </p>
 
-      <!-- Row 3: Assignee + Inbox -->
+      <!-- Assignee + Inbox -->
       <div class="flex items-center gap-2 mb-1.5 flex-wrap">
         <div v-if="conversation.assignee?.name" class="flex items-center gap-1">
           <span class="i-lucide-user-round size-3 text-n-slate-9" />
@@ -170,14 +202,17 @@ const onDelete = () => {
         </div>
       </div>
 
-      <!-- Notes -->
+      <!-- Notes preview -->
       <p v-if="card.notes" class="text-xs text-n-slate-11 m-0 mb-1.5 line-clamp-2 italic">
         {{ card.notes }}
       </p>
+      <p v-else class="text-xs text-n-slate-9 m-0 mb-1.5 italic opacity-0 group-hover:opacity-100 transition-opacity">
+        Clique para adicionar nota...
+      </p>
 
-      <!-- Row 4: Priority picker + Timer -->
-      <div class="flex items-center justify-between mt-1">
-        <!-- Priority -->
+      <!-- Priority + Timer -->
+      <div class="flex items-center justify-between mt-1" @click.stop>
+        <!-- Priority picker -->
         <div class="relative">
           <button
             class="flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-n-alpha-2 transition-colors"
@@ -187,8 +222,6 @@ const onDelete = () => {
             <span class="size-3.5 block flex-shrink-0" :class="[currentPriority.icon, currentPriority.color]" />
             <span class="text-xs" :class="currentPriority.color">{{ currentPriority.label }}</span>
           </button>
-
-          <!-- Priority dropdown -->
           <div
             v-if="showPriorityMenu"
             class="absolute bottom-full left-0 mb-1 bg-n-background border border-n-weak rounded-lg shadow-lg z-50 py-1 min-w-[130px]"
@@ -215,4 +248,90 @@ const onDelete = () => {
       </div>
     </div>
   </div>
+
+  <!-- Edit modal (teleported to body to avoid z-index issues) -->
+  <Teleport to="body">
+    <div
+      v-if="showEditModal"
+      class="fixed inset-0 z-[9999] flex items-center justify-center"
+      @click.self="closeEditModal"
+    >
+      <!-- Backdrop -->
+      <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="closeEditModal" />
+
+      <!-- Modal -->
+      <div class="relative bg-n-background rounded-xl shadow-2xl border border-n-weak w-full max-w-md mx-4 z-10" @click.stop>
+        <!-- Header -->
+        <div class="flex items-center justify-between px-4 pt-4 pb-3 border-b border-n-weak">
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-semibold text-n-slate-12">
+              {{ conversation.contact?.name || 'Conversa' }}
+            </span>
+            <span class="text-xs px-1.5 py-0.5 rounded-full capitalize font-medium" :class="statusClass">
+              {{ conversation.status }}
+            </span>
+          </div>
+          <button
+            class="p-1 rounded hover:bg-n-alpha-2 text-n-slate-10 hover:text-n-slate-12 transition-colors"
+            @click="closeEditModal"
+          >
+            <span class="i-lucide-x size-4 block" />
+          </button>
+        </div>
+
+        <!-- Info -->
+        <div class="px-4 py-3 flex items-center gap-4 text-xs text-n-slate-11 border-b border-n-weak">
+          <span class="font-bold text-n-brand">#{{ conversation.display_id }}</span>
+          <div v-if="conversation.assignee?.name" class="flex items-center gap-1">
+            <span class="i-lucide-user-round size-3" />
+            {{ conversation.assignee.name }}
+          </div>
+          <div v-if="conversation.inbox?.name" class="flex items-center gap-1">
+            <span class="i-lucide-inbox size-3" />
+            {{ conversation.inbox.name }}
+          </div>
+        </div>
+
+        <!-- Notes editor -->
+        <div class="px-4 py-3">
+          <label class="text-xs font-medium text-n-slate-11 mb-1.5 block">Notas internas</label>
+          <textarea
+            v-model="editingNotes"
+            rows="4"
+            placeholder="Adicione notas sobre este atendimento..."
+            class="w-full px-3 py-2 text-sm rounded-lg border border-n-weak bg-n-alpha-1 text-n-slate-12 outline-none focus:border-n-brand transition-colors resize-none"
+            autofocus
+          />
+        </div>
+
+        <!-- Footer -->
+        <div class="flex items-center justify-between px-4 pb-4 gap-2">
+          <!-- Open conversation button -->
+          <button
+            class="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-n-weak hover:bg-n-alpha-2 text-n-slate-11 hover:text-n-slate-12 transition-colors"
+            @click="openConversation"
+          >
+            <span class="i-lucide-external-link size-3.5 block" />
+            Abrir conversa
+          </button>
+
+          <div class="flex gap-2">
+            <button
+              class="px-3 py-1.5 text-sm rounded-lg border border-n-weak hover:bg-n-alpha-2 text-n-slate-11 transition-colors"
+              @click="closeEditModal"
+            >
+              Cancelar
+            </button>
+            <button
+              class="px-3 py-1.5 text-sm rounded-lg bg-n-brand text-white hover:brightness-110 transition-all disabled:opacity-50"
+              :disabled="isSavingNotes"
+              @click="saveNotes"
+            >
+              {{ isSavingNotes ? 'Salvando...' : 'Salvar' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
