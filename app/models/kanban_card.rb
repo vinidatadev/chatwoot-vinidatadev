@@ -1,17 +1,3 @@
-# == Schema Information
-#
-# Table name: kanban_cards
-#
-#  id                 :bigint           not null, primary key
-#  position           :integer          default(0)
-#  notes              :text
-#  kanban_column_id   :bigint           not null
-#  kanban_pipeline_id :bigint           not null
-#  conversation_id    :bigint           not null
-#  account_id         :bigint           not null
-#  created_at         :datetime         not null
-#  updated_at         :datetime         not null
-#
 class KanbanCard < ApplicationRecord
   belongs_to :account
   belongs_to :kanban_pipeline
@@ -21,4 +7,17 @@ class KanbanCard < ApplicationRecord
   validates :conversation_id, uniqueness: { scope: :kanban_pipeline_id }
 
   default_scope { order(:position) }
+
+  before_create :set_entered_column_at
+  before_update :reset_entered_column_at_on_column_change
+
+  private
+
+  def set_entered_column_at
+    self.entered_column_at ||= Time.current
+  end
+
+  def reset_entered_column_at_on_column_change
+    self.entered_column_at = Time.current if kanban_column_id_changed?
+  end
 end

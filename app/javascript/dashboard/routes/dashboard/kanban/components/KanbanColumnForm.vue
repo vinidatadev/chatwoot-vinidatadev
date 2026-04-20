@@ -19,6 +19,7 @@ const name = ref(props.column?.name || '');
 const color = ref(props.column?.color || '#1f93ff');
 const isEntryPoint = ref(props.column?.is_entry_point || false);
 const webhookUrl = ref(props.column?.webhook_url || '');
+const slaMinutes = ref(props.column?.sla_minutes || '');
 
 const onSubmit = async () => {
   if (!name.value.trim()) return;
@@ -32,6 +33,7 @@ const onSubmit = async () => {
         color: color.value,
         is_entry_point: isEntryPoint.value,
         webhook_url: webhookUrl.value,
+        sla_minutes: slaMinutes.value || null,
       });
     } else {
       await store.dispatch('kanban/createColumn', {
@@ -40,6 +42,7 @@ const onSubmit = async () => {
         color: color.value,
         is_entry_point: isEntryPoint.value,
         webhook_url: webhookUrl.value,
+        sla_minutes: slaMinutes.value || null,
       });
     }
     emit('close');
@@ -91,6 +94,22 @@ const onSubmit = async () => {
         class="h-9 px-3 text-sm rounded-lg border border-n-weak bg-n-background text-n-slate-12 outline-none focus:border-n-brand transition-colors"
       />
       <span class="text-xs text-n-slate-10">{{ t('KANBAN.COLUMN_FORM.WEBHOOK_URL_HINT') }}</span>
+    </div>
+
+    <!-- SLA / Timer -->
+    <div class="flex flex-col gap-1">
+      <label class="text-sm font-medium text-n-slate-12">{{ t('KANBAN.COLUMN_FORM.SLA_MINUTES') }}</label>
+      <div class="flex items-center gap-2">
+        <input
+          v-model.number="slaMinutes"
+          type="number"
+          min="1"
+          :placeholder="t('KANBAN.COLUMN_FORM.SLA_MINUTES_PLACEHOLDER')"
+          class="h-9 w-28 px-3 text-sm rounded-lg border border-n-weak bg-n-background text-n-slate-12 outline-none focus:border-n-brand transition-colors"
+        />
+        <span class="text-sm text-n-slate-11">{{ t('KANBAN.COLUMN_FORM.SLA_MINUTES_UNIT') }}</span>
+      </div>
+      <span class="text-xs text-n-slate-10">{{ t('KANBAN.COLUMN_FORM.SLA_MINUTES_HINT') }}</span>
     </div>
 
     <div class="flex justify-end gap-2 pt-1">

@@ -12,7 +12,16 @@ class Api::V1::Accounts::KanbanPipelinesController < Api::V1::Accounts::BaseCont
       kanban_columns: {
         include: {
           kanban_cards: {
-            include: { conversation: { only: [:id, :display_id, :status, :inbox_id, :meta] } }
+            include: {
+              conversation: {
+                only: [:id, :display_id, :status, :inbox_id, :priority, :created_at, :last_activity_at],
+                include: {
+                  contact: { only: [:id, :name, :avatar_url, :phone_number] },
+                  assignee: { only: [:id, :name, :avatar_url] },
+                  inbox: { only: [:id, :name, :channel_type] }
+                }
+              }
+            }
           }
         }
       }

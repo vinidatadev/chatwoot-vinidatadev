@@ -29,6 +29,10 @@
       "WEBHOOK_URL": "Webhook URL",
       "WEBHOOK_URL_PLACEHOLDER": "https://your-n8n.com/webhook/...",
       "WEBHOOK_URL_HINT": "A POST request will be sent to this URL whenever a card is moved into this column.",
+      "SLA_MINUTES": "Time limit (SLA)",
+      "SLA_MINUTES_PLACEHOLDER": "e.g. 60",
+      "SLA_MINUTES_UNIT": "minutes",
+      "SLA_MINUTES_HINT": "Timer turns yellow at 50% and red when exceeded. Leave empty to disable.",
       "SUBMIT": "Create Column"
     },
     "CARD_FORM": {

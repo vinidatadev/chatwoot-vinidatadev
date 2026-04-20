@@ -60,6 +60,7 @@ import { computed } from 'vue';
         :card="card"
         :pipeline-id="pipelineId"
         :column-id="column.id"
+        :sla-minutes="column.sla_minutes"
         draggable="true"
         @dragstart="onDragStart(card, $event)"
       />

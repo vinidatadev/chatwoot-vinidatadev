@@ -15,7 +15,10 @@ Use it as reference when merging upstream updates.
 - Multiple pipelines per account
 - Drag-and-drop cards between columns
 - Click card ID or open-link button to navigate directly to the conversation
-- Card shows: contact name, assignee, inbox, status, notes
+- Card shows: contact name, assignee, inbox, status, priority color bar, timer
+- Priority picker on each card (none/low/medium/high/urgent) — calls Chatwoot API directly
+- Column SLA timer: green → yellow (50%) → red (100%) with configurable minutes per column
+- `entered_column_at` resets every time a card moves, so timer is always "time in current column"
 - Pipeline flag `auto_add_conversations`: every new conversation is automatically added to the entry column
 - Column flag `is_entry_point`: marks which column receives auto-added conversations
 - Column field `webhook_url`: fires a POST to this URL whenever a card is moved into the column (N8N integration)
@@ -39,6 +42,7 @@ Use it as reference when merging upstream updates.
 - `db/migrate/20260421000002_create_kanban_columns.rb`
 - `db/migrate/20260421000003_create_kanban_cards.rb`
 - `db/migrate/20260421000004_add_kanban_enhancements.rb`
+- `db/migrate/20260421000005_add_kanban_sla_and_timer.rb`
 - `app/models/kanban_pipeline.rb`
 - `app/models/kanban_column.rb`
 - `app/models/kanban_card.rb`
