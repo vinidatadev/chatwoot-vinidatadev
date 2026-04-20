@@ -1,24 +1,101 @@
+<script setup>
+import { ref, computed, onMounted } from 'vue';
+import { useStore } from 'vuex';
+import { useI18n } from 'vue-i18n';
+import Button from 'dashboard/components-next/button/Button.vue';
+import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
+import KanbanColumn from './components/KanbanColumn.vue';
+import KanbanColumnForm from './components/KanbanColumnForm.vue';
+import KanbanCardForm from './components/KanbanCardForm.vue';
+
+const props = defineProps({
+  pipelineId: { type: [Number, String], required: true },
+});
+
+const store = useStore();
+const { t } = useI18n();
+
+const columnDialogRef = ref(null);
+const cardDialogRef = ref(null);
+const editingColumn = ref(null);
+const addingToColumnId = ref(null);
+
+const activePipeline = computed(() => store.getters['kanban/getActivePipeline']);
+const columns = computed(() => store.getters['kanban/getColumns']);
+const uiFlags = computed(() => store.getters['kanban/getUIFlags']);
+
+onMounted(() => {
+  store.dispatch('kanban/fetchPipeline', props.pipelineId);
+});
+
+const openAddColumnModal = () => {
+  editingColumn.value = null;
+  columnDialogRef.value?.open();
+};
+
+const openEditColumnModal = column => {
+  editingColumn.value = column;
+  columnDialogRef.value?.open();
+};
+
+const closeColumnModal = () => {
+  editingColumn.value = null;
+  columnDialogRef.value?.close();
+};
+
+const openAddCardModal = columnId => {
+  addingToColumnId.value = columnId;
+  cardDialogRef.value?.open();
+};
+
+const closeCardModal = () => {
+  addingToColumnId.value = null;
+  cardDialogRef.value?.close();
+};
+
+const onCardDropped = ({ cardId, fromColumnId, toColumnId, position }) => {
+  store.dispatch('kanban/moveCard', {
+    pipelineId: props.pipelineId,
+    cardId,
+    fromColumnId,
+    toColumnId,
+    position,
+  });
+};
+
+const onDeleteColumn = columnId => {
+  store.dispatch('kanban/deleteColumn', {
+    pipelineId: props.pipelineId,
+    columnId,
+  });
+};
+</script>
+
 <template>
-  <div class="kanban-board">
-    <div class="kanban-header">
-      <h2 class="kanban-title">{{ activePipeline ? activePipeline.name : $t('KANBAN.TITLE') }}</h2>
-      <div class="kanban-actions">
-        <woot-button
-          size="small"
-          icon="add"
-          @click="openAddColumnModal"
-        >
-          {{ $t('KANBAN.ADD_COLUMN') }}
-        </woot-button>
-      </div>
+  <div class="flex flex-col h-full p-4 overflow-hidden">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-4 flex-shrink-0">
+      <h2 class="text-base font-semibold text-n-slate-12 m-0">
+        {{ activePipeline?.name || t('KANBAN.TITLE') }}
+      </h2>
+      <Button
+        icon="i-lucide-plus"
+        size="sm"
+        variant="faded"
+        color="blue"
+        :label="t('KANBAN.ADD_COLUMN')"
+        @click="openAddColumnModal"
+      />
     </div>
 
-    <div v-if="uiFlags.isFetching" class="kanban-loading">
-      <span>{{ $t('KANBAN.LOADING') }}</span>
+    <!-- Loading -->
+    <div v-if="uiFlags.isFetching" class="flex items-center justify-center flex-1 text-n-slate-11 text-sm">
+      {{ t('KANBAN.LOADING') }}
     </div>
 
-    <div v-else class="kanban-columns" @dragover.prevent>
-      <kanban-column
+    <!-- Columns -->
+    <div v-else class="flex gap-3 overflow-x-auto flex-1 pb-2">
+      <KanbanColumn
         v-for="column in columns"
         :key="column.id"
         :column="column"
@@ -31,159 +108,43 @@
 
       <div
         v-if="!columns.length"
-        class="kanban-empty"
+        class="flex items-center justify-center flex-1 text-n-slate-11 text-sm"
       >
-        <p>{{ $t('KANBAN.EMPTY_COLUMNS') }}</p>
+        {{ t('KANBAN.EMPTY_COLUMNS') }}
       </div>
     </div>
 
-    <!-- Add/Edit Column Modal -->
-    <woot-modal :show.sync="showColumnModal" :on-close="closeColumnModal">
-      <kanban-column-form
+    <!-- Column Dialog -->
+    <Dialog
+      ref="columnDialogRef"
+      :title="editingColumn ? t('KANBAN.COLUMN_FORM.EDIT_TITLE') : t('KANBAN.COLUMN_FORM.TITLE')"
+      :show-confirm-button="false"
+      :show-cancel-button="false"
+      width="sm"
+      @close="closeColumnModal"
+    >
+      <KanbanColumnForm
         :column="editingColumn"
         :pipeline-id="pipelineId"
         @close="closeColumnModal"
       />
-    </woot-modal>
+    </Dialog>
 
-    <!-- Add Card Modal -->
-    <woot-modal :show.sync="showCardModal" :on-close="closeCardModal">
-      <kanban-card-form
+    <!-- Card Dialog -->
+    <Dialog
+      ref="cardDialogRef"
+      :title="t('KANBAN.CARD_FORM.TITLE')"
+      :show-confirm-button="false"
+      :show-cancel-button="false"
+      width="sm"
+      @close="closeCardModal"
+    >
+      <KanbanCardForm
+        v-if="addingToColumnId"
         :column-id="addingToColumnId"
         :pipeline-id="pipelineId"
         @close="closeCardModal"
       />
-    </woot-modal>
+    </Dialog>
   </div>
 </template>
-
-<script>
-import { mapGetters, mapActions } from 'vuex';
-import KanbanColumn from './components/KanbanColumn.vue';
-import KanbanColumnForm from './components/KanbanColumnForm.vue';
-import KanbanCardForm from './components/KanbanCardForm.vue';
-
-export default {
-  name: 'KanbanBoard',
-  components: { KanbanColumn, KanbanColumnForm, KanbanCardForm },
-
-  props: {
-    pipelineId: {
-      type: [Number, String],
-      required: true,
-    },
-  },
-
-  data() {
-    return {
-      showColumnModal: false,
-      showCardModal: false,
-      editingColumn: null,
-      addingToColumnId: null,
-    };
-  },
-
-  computed: {
-    ...mapGetters({
-      activePipeline: 'kanban/getActivePipeline',
-      columns: 'kanban/getColumns',
-      uiFlags: 'kanban/getUIFlags',
-    }),
-  },
-
-  mounted() {
-    this.fetchPipeline(this.pipelineId);
-  },
-
-  methods: {
-    ...mapActions({
-      fetchPipeline: 'kanban/fetchPipeline',
-      moveCard: 'kanban/moveCard',
-      deleteColumn: 'kanban/deleteColumn',
-    }),
-
-    openAddColumnModal() {
-      this.editingColumn = null;
-      this.showColumnModal = true;
-    },
-
-    openEditColumnModal(column) {
-      this.editingColumn = column;
-      this.showColumnModal = true;
-    },
-
-    closeColumnModal() {
-      this.showColumnModal = false;
-      this.editingColumn = null;
-    },
-
-    openAddCardModal(columnId) {
-      this.addingToColumnId = columnId;
-      this.showCardModal = true;
-    },
-
-    closeCardModal() {
-      this.showCardModal = false;
-      this.addingToColumnId = null;
-    },
-
-    async onCardDropped({ cardId, fromColumnId, toColumnId, position }) {
-      await this.moveCard({
-        pipelineId: this.pipelineId,
-        cardId,
-        fromColumnId,
-        toColumnId,
-        position,
-      });
-    },
-
-    async onDeleteColumn(columnId) {
-      await this.deleteColumn({
-        pipelineId: this.pipelineId,
-        columnId,
-      });
-    },
-  },
-};
-</script>
-
-<style lang="scss" scoped>
-.kanban-board {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  padding: var(--space-normal);
-  overflow: hidden;
-}
-
-.kanban-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--space-normal);
-}
-
-.kanban-title {
-  font-size: var(--font-size-large);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-heading);
-  margin: 0;
-}
-
-.kanban-columns {
-  display: flex;
-  gap: var(--space-normal);
-  overflow-x: auto;
-  flex: 1;
-  padding-bottom: var(--space-normal);
-}
-
-.kanban-loading,
-.kanban-empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-  color: var(--color-body);
-}
-</style>

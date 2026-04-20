@@ -1,108 +1,83 @@
-<template>
-  <div class="kanban-form">
-    <woot-modal-header :header-title="$t('KANBAN.CARD_FORM.TITLE')" />
-    <form @submit.prevent="onSubmit">
-      <div class="form-body">
-        <label>
-          {{ $t('KANBAN.CARD_FORM.CONVERSATION_ID') }}
-          <input
-            v-model.number="form.conversation_id"
-            type="number"
-            :placeholder="$t('KANBAN.CARD_FORM.CONVERSATION_ID_PLACEHOLDER')"
-            required
-          />
-        </label>
-        <label>
-          {{ $t('KANBAN.CARD_FORM.NOTES') }}
-          <textarea
-            v-model="form.notes"
-            :placeholder="$t('KANBAN.CARD_FORM.NOTES_PLACEHOLDER')"
-            rows="3"
-          />
-        </label>
-      </div>
-      <div class="form-footer">
-        <woot-button variant="clear" @click="$emit('close')">
-          {{ $t('CANCEL') }}
-        </woot-button>
-        <woot-button type="submit" :loading="isLoading">
-          {{ $t('KANBAN.CARD_FORM.SUBMIT') }}
-        </woot-button>
-      </div>
-    </form>
-  </div>
-</template>
+<script setup>
+import { ref } from 'vue';
+import { useStore } from 'vuex';
+import { useI18n } from 'vue-i18n';
+import Button from 'dashboard/components-next/button/Button.vue';
 
-<script>
-import { mapActions } from 'vuex';
+const props = defineProps({
+  columnId: { type: [Number, String], required: true },
+  pipelineId: { type: [Number, String], required: true },
+});
 
-export default {
-  name: 'KanbanCardForm',
-  emits: ['close'],
+const emit = defineEmits(['close']);
 
-  props: {
-    columnId: { type: [Number, String], required: true },
-    pipelineId: { type: [Number, String], required: true },
-  },
+const store = useStore();
+const { t } = useI18n();
 
-  data() {
-    return {
-      isLoading: false,
-      form: { conversation_id: null, notes: '' },
-    };
-  },
+const isLoading = ref(false);
+const conversationId = ref(null);
+const notes = ref('');
 
-  methods: {
-    ...mapActions({ createCard: 'kanban/createCard' }),
-
-    async onSubmit() {
-      this.isLoading = true;
-      try {
-        await this.createCard({
-          pipelineId: this.pipelineId,
-          kanban_column_id: this.columnId,
-          ...this.form,
-        });
-        this.$emit('close');
-      } finally {
-        this.isLoading = false;
-      }
-    },
-  },
+const onSubmit = async () => {
+  if (!conversationId.value) return;
+  isLoading.value = true;
+  try {
+    await store.dispatch('kanban/createCard', {
+      pipelineId: props.pipelineId,
+      kanban_column_id: props.columnId,
+      conversation_id: conversationId.value,
+      notes: notes.value,
+    });
+    emit('close');
+  } finally {
+    isLoading.value = false;
+  }
 };
 </script>
 
-<style lang="scss" scoped>
-.kanban-form {
-  padding: var(--space-normal);
-  min-width: 400px;
-}
+<template>
+  <form class="flex flex-col gap-4" @submit.prevent="onSubmit">
+    <div class="flex flex-col gap-1">
+      <label class="text-sm font-medium text-n-slate-12">
+        {{ t('KANBAN.CARD_FORM.CONVERSATION_ID') }}
+      </label>
+      <input
+        v-model.number="conversationId"
+        type="number"
+        :placeholder="t('KANBAN.CARD_FORM.CONVERSATION_ID_PLACEHOLDER')"
+        required
+        min="1"
+        class="h-9 px-3 text-sm rounded-lg border border-n-weak bg-n-background text-n-slate-12 outline-none focus:border-n-brand transition-colors"
+      />
+    </div>
 
-.form-body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-normal);
-  margin: var(--space-normal) 0;
+    <div class="flex flex-col gap-1">
+      <label class="text-sm font-medium text-n-slate-12">
+        {{ t('KANBAN.CARD_FORM.NOTES') }}
+      </label>
+      <textarea
+        v-model="notes"
+        :placeholder="t('KANBAN.CARD_FORM.NOTES_PLACEHOLDER')"
+        rows="3"
+        class="px-3 py-2 text-sm rounded-lg border border-n-weak bg-n-background text-n-slate-12 outline-none focus:border-n-brand transition-colors resize-none"
+      />
+    </div>
 
-  label {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-smaller);
-    font-size: var(--font-size-small);
-    font-weight: var(--font-weight-medium);
-  }
-
-  input, textarea {
-    border: 1px solid var(--color-border);
-    border-radius: var(--border-radius-normal);
-    padding: var(--space-small);
-    font-size: var(--font-size-small);
-  }
-}
-
-.form-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--space-small);
-}
-</style>
+    <div class="flex justify-end gap-2 pt-1">
+      <Button
+        type="button"
+        variant="faded"
+        color="slate"
+        size="sm"
+        :label="t('CANCEL')"
+        @click="emit('close')"
+      />
+      <Button
+        type="submit"
+        size="sm"
+        :label="t('KANBAN.CARD_FORM.SUBMIT')"
+        :is-loading="isLoading"
+      />
+    </div>
+  </form>
+</template>

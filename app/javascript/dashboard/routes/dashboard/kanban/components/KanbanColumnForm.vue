@@ -1,119 +1,90 @@
-<template>
-  <div class="kanban-form">
-    <woot-modal-header
-      :header-title="column ? $t('KANBAN.COLUMN_FORM.EDIT_TITLE') : $t('KANBAN.COLUMN_FORM.TITLE')"
-    />
-    <form @submit.prevent="onSubmit">
-      <div class="form-body">
-        <label>
-          {{ $t('KANBAN.COLUMN_FORM.NAME') }}
-          <input
-            v-model="form.name"
-            type="text"
-            :placeholder="$t('KANBAN.COLUMN_FORM.NAME_PLACEHOLDER')"
-            required
-          />
-        </label>
-        <label>
-          {{ $t('KANBAN.COLUMN_FORM.COLOR') }}
-          <input v-model="form.color" type="color" />
-        </label>
-      </div>
-      <div class="form-footer">
-        <woot-button variant="clear" @click="$emit('close')">
-          {{ $t('CANCEL') }}
-        </woot-button>
-        <woot-button type="submit" :loading="isLoading">
-          {{ column ? $t('SAVE') : $t('KANBAN.COLUMN_FORM.SUBMIT') }}
-        </woot-button>
-      </div>
-    </form>
-  </div>
-</template>
+<script setup>
+import { ref } from 'vue';
+import { useStore } from 'vuex';
+import { useI18n } from 'vue-i18n';
+import Button from 'dashboard/components-next/button/Button.vue';
 
-<script>
-import { mapActions } from 'vuex';
+const props = defineProps({
+  column: { type: Object, default: null },
+  pipelineId: { type: [Number, String], required: true },
+});
 
-export default {
-  name: 'KanbanColumnForm',
-  emits: ['close'],
+const emit = defineEmits(['close']);
 
-  props: {
-    column: { type: Object, default: null },
-    pipelineId: { type: [Number, String], required: true },
-  },
+const store = useStore();
+const { t } = useI18n();
 
-  data() {
-    return {
-      isLoading: false,
-      form: {
-        name: this.column?.name || '',
-        color: this.column?.color || '#1f93ff',
-      },
-    };
-  },
+const isLoading = ref(false);
+const name = ref(props.column?.name || '');
+const color = ref(props.column?.color || '#1f93ff');
 
-  methods: {
-    ...mapActions({
-      createColumn: 'kanban/createColumn',
-      updateColumn: 'kanban/updateColumn',
-    }),
-
-    async onSubmit() {
-      this.isLoading = true;
-      try {
-        if (this.column) {
-          await this.updateColumn({
-            pipelineId: this.pipelineId,
-            columnId: this.column.id,
-            ...this.form,
-          });
-        } else {
-          await this.createColumn({
-            pipelineId: this.pipelineId,
-            ...this.form,
-          });
-        }
-        this.$emit('close');
-      } finally {
-        this.isLoading = false;
-      }
-    },
-  },
+const onSubmit = async () => {
+  if (!name.value.trim()) return;
+  isLoading.value = true;
+  try {
+    if (props.column) {
+      await store.dispatch('kanban/updateColumn', {
+        pipelineId: props.pipelineId,
+        columnId: props.column.id,
+        name: name.value,
+        color: color.value,
+      });
+    } else {
+      await store.dispatch('kanban/createColumn', {
+        pipelineId: props.pipelineId,
+        name: name.value,
+        color: color.value,
+      });
+    }
+    emit('close');
+  } finally {
+    isLoading.value = false;
+  }
 };
 </script>
 
-<style lang="scss" scoped>
-.kanban-form {
-  padding: var(--space-normal);
-  min-width: 360px;
-}
+<template>
+  <form class="flex flex-col gap-4" @submit.prevent="onSubmit">
+    <div class="flex flex-col gap-1">
+      <label class="text-sm font-medium text-n-slate-12">
+        {{ t('KANBAN.COLUMN_FORM.NAME') }}
+      </label>
+      <input
+        v-model="name"
+        type="text"
+        :placeholder="t('KANBAN.COLUMN_FORM.NAME_PLACEHOLDER')"
+        required
+        class="h-9 px-3 text-sm rounded-lg border border-n-weak bg-n-background text-n-slate-12 outline-none focus:border-n-brand transition-colors"
+      />
+    </div>
 
-.form-body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-normal);
-  margin: var(--space-normal) 0;
+    <div class="flex items-center gap-3">
+      <label class="text-sm font-medium text-n-slate-12">
+        {{ t('KANBAN.COLUMN_FORM.COLOR') }}
+      </label>
+      <input
+        v-model="color"
+        type="color"
+        class="h-9 w-16 rounded-lg border border-n-weak cursor-pointer bg-n-background"
+      />
+      <span class="text-sm text-n-slate-11">{{ color }}</span>
+    </div>
 
-  label {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-smaller);
-    font-size: var(--font-size-small);
-    font-weight: var(--font-weight-medium);
-  }
-
-  input {
-    border: 1px solid var(--color-border);
-    border-radius: var(--border-radius-normal);
-    padding: var(--space-small);
-    font-size: var(--font-size-small);
-  }
-}
-
-.form-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--space-small);
-}
-</style>
+    <div class="flex justify-end gap-2 pt-1">
+      <Button
+        type="button"
+        variant="faded"
+        color="slate"
+        size="sm"
+        :label="t('CANCEL')"
+        @click="emit('close')"
+      />
+      <Button
+        type="submit"
+        size="sm"
+        :label="column ? t('SAVE') : t('KANBAN.COLUMN_FORM.SUBMIT')"
+        :is-loading="isLoading"
+      />
+    </div>
+  </form>
+</template>

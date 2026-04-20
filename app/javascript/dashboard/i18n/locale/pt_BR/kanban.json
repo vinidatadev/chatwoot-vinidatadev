@@ -7,6 +7,7 @@
     "SELECT_PIPELINE": "Selecione ou crie um pipeline para começar.",
     "ADD_COLUMN": "Adicionar Coluna",
     "ADD_CARD": "Adicionar Card",
+    "NO_PIPELINES": "Nenhum pipeline ainda.",
     "PIPELINE_FORM": {
       "TITLE": "Novo Pipeline",
       "NAME": "Nome",
