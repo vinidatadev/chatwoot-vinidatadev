@@ -1,0 +1,35 @@
+{
+  "KANBAN": {
+    "TITLE": "Kanban",
+    "PIPELINES": "Pipelines",
+    "LOADING": "Carregando...",
+    "EMPTY_COLUMNS": "Nenhuma coluna ainda. Adicione uma coluna para começar.",
+    "SELECT_PIPELINE": "Selecione ou crie um pipeline para começar.",
+    "ADD_COLUMN": "Adicionar Coluna",
+    "ADD_CARD": "Adicionar Card",
+    "PIPELINE_FORM": {
+      "TITLE": "Novo Pipeline",
+      "NAME": "Nome",
+      "NAME_PLACEHOLDER": "ex: Pipeline de Vendas",
+      "DESCRIPTION": "Descrição",
+      "DESCRIPTION_PLACEHOLDER": "Descreva este pipeline...",
+      "SUBMIT": "Criar Pipeline"
+    },
+    "COLUMN_FORM": {
+      "TITLE": "Nova Coluna",
+      "EDIT_TITLE": "Editar Coluna",
+      "NAME": "Nome",
+      "NAME_PLACEHOLDER": "ex: Em Andamento",
+      "COLOR": "Cor",
+      "SUBMIT": "Criar Coluna"
+    },
+    "CARD_FORM": {
+      "TITLE": "Adicionar Conversa",
+      "CONVERSATION_ID": "ID da Conversa",
+      "CONVERSATION_ID_PLACEHOLDER": "Digite o ID da conversa",
+      "NOTES": "Notas",
+      "NOTES_PLACEHOLDER": "Notas opcionais...",
+      "SUBMIT": "Adicionar ao Board"
+    }
+  }
+}
