@@ -16,7 +16,19 @@ class Api::V1::Accounts::KanbanCardsController < Api::V1::Accounts::BaseControll
   end
 
   def update
+    previous_column_id = @card.kanban_column_id
     @card.update!(card_params)
+
+    # Fire webhook if column changed
+    if card_params[:kanban_column_id].present? &&
+       card_params[:kanban_column_id].to_i != previous_column_id
+      Rails.configuration.dispatcher.dispatch(
+        'kanban_card_moved',
+        Time.zone.now,
+        { card: @card, column: @card.kanban_column }
+      )
+    end
+
     render json: @card
   end
 

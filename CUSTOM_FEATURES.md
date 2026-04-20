@@ -7,11 +7,30 @@ Use it as reference when merging upstream updates.
 
 ## Kanban Board
 
-**Added:** 2026-04-21  
+**Added:** 2026-04-21
+**Updated:** 2026-04-21 (enhancements)
 **Route:** `/app/accounts/:accountId/kanban`
 
-### What it does
-A Kanban board to organize conversations into pipelines and columns with drag-and-drop support.
+### Features
+- Multiple pipelines per account
+- Drag-and-drop cards between columns
+- Click card ID or open-link button to navigate directly to the conversation
+- Card shows: contact name, assignee, inbox, status, notes
+- Pipeline flag `auto_add_conversations`: every new conversation is automatically added to the entry column
+- Column flag `is_entry_point`: marks which column receives auto-added conversations
+- Column field `webhook_url`: fires a POST to this URL whenever a card is moved into the column (N8N integration)
+
+### Webhook payload (sent on card move)
+```json
+{
+  "event": "kanban_card_moved",
+  "pipeline": { "id": 1, "name": "Vendas" },
+  "column": { "id": 2, "name": "Em Andamento" },
+  "conversation": { "id": 10, "display_id": 15, "status": "open", "inbox_id": 1 },
+  "card": { "id": 5, "notes": "..." },
+  "timestamp": "2026-04-21T00:00:00Z"
+}
+```
 
 ### Files added (do not delete)
 
@@ -19,6 +38,7 @@ A Kanban board to organize conversations into pipelines and columns with drag-an
 - `db/migrate/20260421000001_create_kanban_pipelines.rb`
 - `db/migrate/20260421000002_create_kanban_columns.rb`
 - `db/migrate/20260421000003_create_kanban_cards.rb`
+- `db/migrate/20260421000004_add_kanban_enhancements.rb`
 - `app/models/kanban_pipeline.rb`
 - `app/models/kanban_column.rb`
 - `app/models/kanban_card.rb`
@@ -28,6 +48,8 @@ A Kanban board to organize conversations into pipelines and columns with drag-an
 - `app/policies/kanban_pipeline_policy.rb`
 - `app/policies/kanban_column_policy.rb`
 - `app/policies/kanban_card_policy.rb`
+- `app/listeners/kanban_listener.rb`
+- `app/jobs/kanban_webhook_job.rb`
 
 **Frontend:**
 - `app/javascript/dashboard/api/kanban.js`
@@ -45,6 +67,8 @@ A Kanban board to organize conversations into pipelines and columns with drag-an
 
 **Files modified (watch for conflicts on upstream merge):**
 - `config/routes.rb` — added `kanban_pipelines` nested routes
+- `app/models/account.rb` — added `has_many :kanban_pipelines/columns/cards`
+- `app/dispatchers/async_dispatcher.rb` — registered `KanbanListener`
 - `app/javascript/dashboard/routes/dashboard/dashboard.routes.js` — added `kanbanRoutes`
 - `app/javascript/dashboard/store/index.js` — registered `kanban` store module
 - `app/javascript/dashboard/i18n/locale/en/index.js` — added kanban import
@@ -75,3 +99,9 @@ POST   /api/v1/accounts/:id/kanban_pipelines/:pid/kanban_cards
 PATCH  /api/v1/accounts/:id/kanban_pipelines/:pid/kanban_cards/:kid
 DELETE /api/v1/accounts/:id/kanban_pipelines/:pid/kanban_cards/:kid
 ```
+
+### N8N Integration
+1. Create a column (e.g. "Qualificado")
+2. Set the Webhook URL to your N8N webhook trigger URL
+3. When any card is dragged into that column, N8N receives the payload above
+4. Use the `conversation.id` in N8N to call back the Chatwoot API and take actions

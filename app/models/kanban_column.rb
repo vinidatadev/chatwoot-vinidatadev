@@ -1,16 +1,3 @@
-# == Schema Information
-#
-# Table name: kanban_columns
-#
-#  id                 :bigint           not null, primary key
-#  name               :string           not null
-#  position           :integer          default(0)
-#  color              :string           default("#1f93ff")
-#  kanban_pipeline_id :bigint           not null
-#  account_id         :bigint           not null
-#  created_at         :datetime         not null
-#  updated_at         :datetime         not null
-#
 class KanbanColumn < ApplicationRecord
   belongs_to :account
   belongs_to :kanban_pipeline
@@ -19,4 +6,14 @@ class KanbanColumn < ApplicationRecord
   validates :name, presence: true
 
   default_scope { order(:position) }
+
+  # Ensure only one entry_point per pipeline
+  validate :single_entry_point_per_pipeline, if: :is_entry_point?
+
+  private
+
+  def single_entry_point_per_pipeline
+    existing = kanban_pipeline.kanban_columns.where(is_entry_point: true).where.not(id: id)
+    errors.add(:is_entry_point, 'already set on another column') if existing.exists?
+  end
 end

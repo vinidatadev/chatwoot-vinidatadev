@@ -41,6 +41,6 @@ class Api::V1::Accounts::KanbanPipelinesController < Api::V1::Accounts::BaseCont
   end
 
   def pipeline_params
-    params.require(:kanban_pipeline).permit(:name, :description, :position)
+    params.require(:kanban_pipeline).permit(:name, :description, :position, :auto_add_conversations)
   end
 end

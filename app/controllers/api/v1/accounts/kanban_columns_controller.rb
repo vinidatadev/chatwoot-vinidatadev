@@ -34,6 +34,6 @@ class Api::V1::Accounts::KanbanColumnsController < Api::V1::Accounts::BaseContro
   end
 
   def column_params
-    params.require(:kanban_column).permit(:name, :position, :color)
+    params.require(:kanban_column).permit(:name, :position, :color, :is_entry_point, :webhook_url)
   end
 end
