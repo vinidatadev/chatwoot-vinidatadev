@@ -25,6 +25,9 @@ A Kanban board to organize conversations into pipelines and columns with drag-an
 - `app/controllers/api/v1/accounts/kanban_pipelines_controller.rb`
 - `app/controllers/api/v1/accounts/kanban_columns_controller.rb`
 - `app/controllers/api/v1/accounts/kanban_cards_controller.rb`
+- `app/policies/kanban_pipeline_policy.rb`
+- `app/policies/kanban_column_policy.rb`
+- `app/policies/kanban_card_policy.rb`
 
 **Frontend:**
 - `app/javascript/dashboard/api/kanban.js`

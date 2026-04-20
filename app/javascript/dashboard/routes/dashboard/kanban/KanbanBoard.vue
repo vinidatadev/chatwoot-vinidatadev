@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useStore } from 'vuex';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -26,6 +26,10 @@ const uiFlags = computed(() => store.getters['kanban/getUIFlags']);
 
 onMounted(() => {
   store.dispatch('kanban/fetchPipeline', props.pipelineId);
+});
+
+watch(() => props.pipelineId, id => {
+  store.dispatch('kanban/fetchPipeline', id);
 });
 
 const openAddColumnModal = () => {
