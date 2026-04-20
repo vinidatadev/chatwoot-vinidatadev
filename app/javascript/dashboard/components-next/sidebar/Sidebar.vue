@@ -575,6 +575,13 @@ const menuItems = computed(() => {
       ],
     },
     {
+      name: 'Kanban',
+      label: t('KANBAN.TITLE'),
+      icon: 'i-lucide-layout-dashboard',
+      to: accountScopedRoute('kanban_index'),
+      activeOn: ['kanban_index'],
+    },
+    {
       name: 'Settings',
       label: t('SIDEBAR.SETTINGS'),
       icon: 'i-lucide-bolt',

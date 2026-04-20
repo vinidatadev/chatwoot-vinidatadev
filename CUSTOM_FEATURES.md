@@ -46,6 +46,7 @@ A Kanban board to organize conversations into pipelines and columns with drag-an
 - `app/javascript/dashboard/store/index.js` — registered `kanban` store module
 - `app/javascript/dashboard/i18n/locale/en/index.js` — added kanban import
 - `app/javascript/dashboard/i18n/locale/pt_BR/index.js` — added kanban import
+- `app/javascript/dashboard/components-next/sidebar/Sidebar.vue` — added Kanban menu item
 
 ### After deploying / after upstream merge
 ```bash
