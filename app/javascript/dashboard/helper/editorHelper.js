@@ -123,30 +123,30 @@ export function cleanSignature(signature) {
 }
 
 /**
- * Adds the signature delimiter to the beginning of the signature.
+ * Builds the signature prefix in the format "SignatureName: "
+ * Strips the "--" delimiter and uses only the plain text of the signature.
  *
- * @param {string} signature - The signature to add the delimiter to.
- * @returns {string} - The signature with the delimiter added.
+ * @param {string} signature - The signature to build the prefix from.
+ * @returns {string} - The prefix string, e.g. "Vinicius: "
  */
-function appendDelimiter(signature) {
-  return `${SIGNATURE_DELIMITER}\n\n${cleanSignature(signature)}`;
+function buildSignaturePrefix(signature) {
+  const cleaned = extractTextFromMarkdown(cleanSignature(signature));
+  return `${cleaned}: `;
 }
 
 /**
- * Check if there's an unedited signature at the end of the body
- * If there is, return the index of the signature, If there isn't, return -1
+ * Check if the body already starts with the signature prefix
  *
- * @param {string} body - The body to search for the signature.
- * @param {string} signature - The signature to search for.
- * @returns {number} - The index of the last occurrence of the signature in the body, or -1 if not found.
+ * @param {string} body - The body to search for the signature prefix.
+ * @param {string} signature - The signature to check.
+ * @returns {boolean} - Whether the body starts with the signature prefix.
  */
 export function findSignatureInBody(body, signature) {
-  const trimmedBody = body.trimEnd();
-  const cleanedSignature = cleanSignature(signature);
+  const prefix = buildSignaturePrefix(signature);
+  const trimmedBody = body.trimStart();
 
-  // check if body ends with signature
-  if (trimmedBody.endsWith(cleanedSignature)) {
-    return body.lastIndexOf(cleanedSignature);
+  if (trimmedBody.startsWith(prefix)) {
+    return body.indexOf(prefix);
   }
 
   return -1;
@@ -170,83 +170,57 @@ export function getEffectiveChannelType(channelType, medium) {
 }
 
 /**
- * Appends the signature to the body, separated by the signature delimiter.
- * Automatically strips unsupported formatting based on channel capabilities.
+ * Prepends the signature as a "Name: " prefix before the body content.
+ * No delimiter (--) is added. The signature text is used as the agent name prefix.
  *
- * @param {string} body - The body to append the signature to.
- * @param {string} signature - The signature to append.
- * @param {string} channelType - Optional. The effective channel type to determine supported formatting.
- *                               For Twilio channels, pass the result of getEffectiveChannelType().
- * @returns {string} - The body with the signature appended.
+ * @param {string} body - The body to prepend the signature to.
+ * @param {string} signature - The signature to prepend.
+ * @param {string} channelType - Optional. The effective channel type.
+ * @returns {string} - The body with the signature prefix prepended.
  */
 export function appendSignature(body, signature, channelType) {
-  // Strip only unsupported formatting based on channel capabilities
   const preparedSignature = channelType
     ? stripUnsupportedMarkdown(signature, channelType)
     : signature;
-  const cleanedSignature = cleanSignature(preparedSignature);
-  // if signature is already present, return body
-  if (findSignatureInBody(body, cleanedSignature) > -1) {
+
+  // if signature prefix is already present, return body as-is
+  if (findSignatureInBody(body, preparedSignature) > -1) {
     return body;
   }
 
-  return `${body.trimEnd()}\n\n${appendDelimiter(cleanedSignature)}`;
+  const prefix = buildSignaturePrefix(preparedSignature);
+  return `${prefix}${body.trimStart()}`;
 }
 
 /**
- * Removes the signature from the body, along with the signature delimiter.
- * Tries multiple signature variants: original, channel-stripped, and fully stripped.
+ * Removes the signature prefix ("Name: ") from the beginning of the body.
  *
  * @param {string} body - The body to remove the signature from.
  * @param {string} signature - The signature to remove.
- * @param {string} channelType - Optional. The effective channel type for channel-specific stripping.
- * @returns {string} - The body with the signature removed.
+ * @param {string} channelType - Optional. The effective channel type.
+ * @returns {string} - The body with the signature prefix removed.
  */
 export function removeSignature(body, signature, channelType) {
-  // Build unique list of signature variants to try
-  const channelStripped = channelType
+  const preparedSignature = channelType
     ? cleanSignature(stripUnsupportedMarkdown(signature, channelType))
-    : null;
-  const signaturesToTry = [
-    cleanSignature(signature),
-    channelStripped,
-    cleanSignature(extractTextFromMarkdown(signature)),
-  ].filter((sig, i, arr) => sig && arr.indexOf(sig) === i); // Remove nulls and duplicates
+    : signature;
 
-  // Find the first matching signature
-  const signatureIndex = signaturesToTry.reduce(
-    (index, sig) => (index === -1 ? findSignatureInBody(body, sig) : index),
-    -1
-  );
+  const signatureIndex = findSignatureInBody(body, preparedSignature);
 
-  // no need to trim the ends here, because it will simply be removed in the next method
-  let newBody = body;
+  if (signatureIndex === -1) return body;
 
-  // if signature is present, remove it and trim it
-  // trimming will ensure any spaces or new lines before the signature are removed
-  // This means we will have the delimiter at the end
-  if (signatureIndex > -1) {
-    newBody = newBody.substring(0, signatureIndex).trimEnd();
-  }
-
-  // Remove delimiter if it's at the end
-  if (newBody.endsWith(SIGNATURE_DELIMITER)) {
-    // if the delimiter is at the end, remove it
-    newBody = newBody.slice(0, -SIGNATURE_DELIMITER.length);
-  }
-
-  return newBody;
+  const prefix = buildSignaturePrefix(preparedSignature);
+  return body.slice(signatureIndex + prefix.length);
 }
 
 /**
- * Replaces the old signature with the new signature.
- * If the old signature is not present, it will append the new signature.
+ * Replaces the old signature prefix with the new signature prefix.
+ * If the old signature is not present, it will prepend the new signature.
  *
  * @param {string} body - The body to replace the signature in.
  * @param {string} oldSignature - The signature to replace.
  * @param {string} newSignature - The signature to replace the old signature with.
  * @returns {string} - The body with the old signature replaced with the new signature.
- *
  */
 export function replaceSignature(body, oldSignature, newSignature) {
   const withoutSignature = removeSignature(body, oldSignature);
