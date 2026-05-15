@@ -124,13 +124,15 @@ export function cleanSignature(signature) {
 
 /**
  * Builds the signature prefix in the format "SignatureName: "
- * Strips the "--" delimiter and uses only the plain text of the signature.
+ * Preserves markdown formatting (bold, italic) from the signature.
+ * Removes any trailing newlines so it stays inline.
  *
  * @param {string} signature - The signature to build the prefix from.
- * @returns {string} - The prefix string, e.g. "Vinicius: "
+ * @returns {string} - The prefix string, e.g. "**Vinicius**: " or "Vinicius: "
  */
 function buildSignaturePrefix(signature) {
-  const cleaned = extractTextFromMarkdown(cleanSignature(signature));
+  // Use cleanSignature to normalize, then strip trailing newlines to keep inline
+  const cleaned = cleanSignature(signature).replace(/\n+$/, '').trim();
   return `${cleaned}: `;
 }
 
@@ -139,14 +141,21 @@ function buildSignaturePrefix(signature) {
  *
  * @param {string} body - The body to search for the signature prefix.
  * @param {string} signature - The signature to check.
- * @returns {boolean} - Whether the body starts with the signature prefix.
+ * @returns {number} - Index where prefix starts, or -1 if not found.
  */
 export function findSignatureInBody(body, signature) {
-  const prefix = buildSignaturePrefix(signature);
+  // Build prefix using plain text for detection (handles bold/italic variants)
+  const plainPrefix = `${extractTextFromMarkdown(cleanSignature(signature)).trim()}: `;
   const trimmedBody = body.trimStart();
 
-  if (trimmedBody.startsWith(prefix)) {
-    return body.indexOf(prefix);
+  if (trimmedBody.startsWith(plainPrefix)) {
+    return body.indexOf(plainPrefix);
+  }
+
+  // Also check markdown prefix (e.g. **Vinicius**: )
+  const mdPrefix = buildSignaturePrefix(signature);
+  if (trimmedBody.startsWith(mdPrefix)) {
+    return body.indexOf(mdPrefix);
   }
 
   return -1;
@@ -189,7 +198,10 @@ export function appendSignature(body, signature, channelType) {
   }
 
   const prefix = buildSignaturePrefix(preparedSignature);
-  return `${prefix}${body.trimStart()}`;
+  const trimmedBody = body.trimStart();
+
+  // Place prefix inline at the start, no extra newlines
+  return `${prefix}${trimmedBody}`;
 }
 
 /**
@@ -209,7 +221,11 @@ export function removeSignature(body, signature, channelType) {
 
   if (signatureIndex === -1) return body;
 
-  const prefix = buildSignaturePrefix(preparedSignature);
+  // Try markdown prefix first, then plain text prefix
+  const mdPrefix = buildSignaturePrefix(preparedSignature);
+  const plainPrefix = `${extractTextFromMarkdown(cleanSignature(preparedSignature)).trim()}: `;
+
+  const prefix = body.trimStart().startsWith(mdPrefix) ? mdPrefix : plainPrefix;
   return body.slice(signatureIndex + prefix.length);
 }
 
