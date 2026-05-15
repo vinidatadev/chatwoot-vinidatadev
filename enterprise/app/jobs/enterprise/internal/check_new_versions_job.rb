@@ -10,7 +10,9 @@ module Enterprise::Internal::CheckNewVersionsJob
   def update_plan_info
     return if @instance_info.blank?
 
-    update_installation_config(key: 'INSTALLATION_PRICING_PLAN', value: @instance_info['plan'])
+    # Do not overwrite plan with 'community' from hub — keep locally configured plan
+    plan_from_hub = @instance_info['plan']
+    update_installation_config(key: 'INSTALLATION_PRICING_PLAN', value: plan_from_hub) if plan_from_hub.present? && plan_from_hub != 'community'
     update_installation_config(key: 'INSTALLATION_PRICING_PLAN_QUANTITY', value: @instance_info['plan_quantity'])
     update_installation_config(key: 'CHATWOOT_SUPPORT_WEBSITE_TOKEN', value: @instance_info['chatwoot_support_website_token'])
     update_installation_config(key: 'CHATWOOT_SUPPORT_IDENTIFIER_HASH', value: @instance_info['chatwoot_support_identifier_hash'])
